@@ -11,6 +11,7 @@ intents.messages = True
 intents.reactions = True
 intents.members = True
 intents.message_content = True
+intents.dm_messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
@@ -26,12 +27,6 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     await bot.tree.sync()
 
-
-@bot.hybrid_command()
-async def davai(interaction: discord.Interaction):
-    await interaction.reply(f"Pisk dw zajibal {interaction.user_mention}", ephemeral=True)
-
-
 @bot.event
 async def on_message(message):
 
@@ -41,45 +36,47 @@ async def on_message(message):
     if message.content.startswith('$hello'):
         await message.channel.send(f'Sw {message.author} pahsol naxui dalbajobe')
 
-
 @bot.event
 async def on_message(msg):
 
     if msg.author == bot.user:
+        if msg.channel.id == VOTING_CHANNEL_ID:
+            await msg.add_reaction("👍")
+        else:
+            await msg.add_reaction("💀")
         return
     
     voting_channel = bot.get_channel(VOTING_CHANNEL_ID)
 
     # if message is sent to submissions channel
     if msg.channel.id == SUBMISSIONS_CHANNEL_ID:
-        only_one_attachment = len(msg.attachments) == 1
+        attachment_count = len(msg.attachments)
 
-        if not only_one_attachment:
-            await msg.reply("Please only send one image")
+        if attachment_count > 1:
+            await msg.author.send("Only one attachment is allowed")
             await msg.delete()
             return
+    
+        if attachment_count == 0:
+            await msg.author.send("Please send an image. Not a text message!")
+            await msg.delete()
+            return
+
+        print(msg.attachments)
 
         full_filename = msg.attachments[0].filename
         file_extension = full_filename.split('.')[1]
 
         allowed_extensions = ["apng", "avif", "gif", "jpeg", "jpg", "png", "svg", "webp", "bmp", "ico", "tiff"]
 
-        if file_extension in allowed_extensions:
-            user = msg.author
+        if file_extension.lower() in allowed_extensions:
             await voting_channel.send(msg.attachments[0])
-            await msg.reply(f"Istrina {user.name} fotke")
-            
+            await msg.author.send("photo uploaded successfully")
         else:
-            await msg.channel.send(f"Allowed extensions: {allowed_extensions}")
+            await msg.author.send(f"Allowed extensions: {allowed_extensions}\nNote: iphone RAW photos (chujnia) aren't allowed")
         
         await msg.delete()
 
-    if msg.channel.id == 1165580873987539045:
-        await msg.add_reaction("✅")
-        
-    
-    if msg.channel.id == 1165580873987539045:
-        await msg.add_reaction("✅")
 
 
 user_reactions = {}
@@ -90,10 +87,10 @@ async def on_raw_reaction_add(payload):
     user_id = payload.user_id
     channel_id = payload.channel_id
 
-    if user_id == bot.user.id:
+    if user_id == bot.user.id and channel_id != VOTING_CHANNEL_ID:
         return
 
-    if payload.event_type == "REACTION_ADD" and (channel_id == 1165580873987539045 or channel_id == 1165580873987539045):
+    if payload.event_type == "REACTION_ADD" and channel_id == VOTING_CHANNEL_ID:
         if user_reactions.get(user_id, None) is None:
             user_reactions[user_id] = {}
 
@@ -116,10 +113,10 @@ async def on_raw_reaction_remove(payload):
     user_id = payload.user_id
     channel_id = payload.channel_id
 
-    if user_id == bot.user.id:
+    if user_id == bot.user.id and channel_id != VOTING_CHANNEL_ID:
         return
    
-    if payload.event_type == "REACTION_REMOVE" and (channel_id == 1165580873987539045 or channel_id == 1165580873987539045):
+    if payload.event_type == "REACTION_REMOVE" and channel_id == VOTING_CHANNEL_ID:
         if user_reactions.get(user_id, None) is not None:
             user_message_reactions = user_reactions[user_id]
             if user_message_reactions.get(message_id, None) is not None:
