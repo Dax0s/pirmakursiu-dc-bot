@@ -1,0 +1,2 @@
+# pirmakursiu-dc-bot
+neskaitykit
