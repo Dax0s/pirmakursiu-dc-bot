@@ -1,31 +1,32 @@
-# This example requires the 'message_content' intent.
-
 import discord
 from dotenv import load_dotenv
 import os
+from discord.ext import commands
 
 load_dotenv()
 
 intents = discord.Intents.default()
 intents.message_content = True
+intents.dm_messages = True
 
-client = discord.Client(intents=intents)
-
+bot = commands.Bot(command_prefix="!", intents=intents)
 TOKEN = os.getenv('TOKEN')
 
 
-@client.event
+@bot.event
 async def on_ready():
-    print(f'We have logged in as {client.user}')
+    print(f'We have logged in as {bot.user}')
 
 
-@client.event
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+
+    if message.author == bot.user:
         return
 
     if message.content.startswith('$hello'):
-        await message.channel.send('Hello!')
+        await message.channel.send(f'Sw {message.author} pahsol naxui dalbajobe')
 
 
-client.run(TOKEN)
+
+bot.run(TOKEN)
