@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from dotenv import load_dotenv
+from discord.utils import get
 import os
 from discord.ext import commands
 
@@ -15,8 +16,6 @@ intents.dm_messages = True
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# tree = app_commands.CommandTree(bot)
-
 TOKEN = os.getenv('TOKEN')
 
 SUBMISSIONS_CHANNEL_ID = 1165583893324382218
@@ -27,24 +26,21 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     await bot.tree.sync()
 
-@bot.event
-async def on_message(message):
 
-    if message.author == bot.user:
-        return
 
-    if message.content.startswith('$hello'):
-        await message.channel.send(f'Sw {message.author} pahsol naxui dalbajobe')
 
 @bot.event
 async def on_message(msg):
 
+    if msg.content.startswith('$hello'):
+        await msg.channel.send(f'Sw {msg.author} pashol naxui dalbajobe')
+
     if msg.author == bot.user:
         if msg.channel.id == VOTING_CHANNEL_ID:
             await msg.add_reaction("👍")
-        else:
             await msg.add_reaction("💀")
-        return
+        else:
+            return
     
     voting_channel = bot.get_channel(VOTING_CHANNEL_ID)
 
@@ -68,10 +64,15 @@ async def on_message(msg):
         file_extension = full_filename.split('.')[1]
 
         allowed_extensions = ["apng", "avif", "gif", "jpeg", "jpg", "png", "svg", "webp", "bmp", "ico", "tiff"]
-
+        user = msg.author
         if file_extension.lower() in allowed_extensions:
-            await voting_channel.send(msg.attachments[0])
-            await msg.author.send("photo uploaded successfully")
+            
+            embed=discord.Embed(title="Photo Submission",
+                                description=f"Uploaded by: {user.mention}",
+                                color=0xFF5733)
+            embed.set_image(url=msg.attachments[0])
+            await voting_channel.send(embed = embed)
+            await msg.author.send("Photo uploaded successfully")
         else:
             await msg.author.send(f"Allowed extensions: {allowed_extensions}\nNote: iphone RAW photos (chujnia) aren't allowed")
         
@@ -86,9 +87,16 @@ async def on_raw_reaction_add(payload):
     message_id = payload.message_id
     user_id = payload.user_id
     channel_id = payload.channel_id
+    reaction = str(payload.emoji)
 
-    if user_id == bot.user.id and channel_id != VOTING_CHANNEL_ID:
+    if user_id == bot.user.id:
         return
+
+
+    if not (reaction == "👍" or reaction == "💀") and channel_id == VOTING_CHANNEL_ID:
+        channel = bot.get_channel(channel_id)
+        message = await channel.fetch_message(message_id)
+        await message.remove_reaction(payload.emoji, discord.Object(user_id))
 
     if payload.event_type == "REACTION_ADD" and channel_id == VOTING_CHANNEL_ID:
         if user_reactions.get(user_id, None) is None:
@@ -101,11 +109,12 @@ async def on_raw_reaction_add(payload):
             user_message_reactions[message_id] += 1
 
         if user_message_reactions[message_id] == 2:
-            channel_id = payload.channel_id
             channel = bot.get_channel(channel_id)
             message = await channel.fetch_message(message_id)
             await message.remove_reaction(payload.emoji, discord.Object(user_id))
             print("istrinta naxui durneli tu")
+
+
 
 @bot.event
 async def on_raw_reaction_remove(payload):
@@ -130,5 +139,48 @@ async def on_raw_reaction_remove(payload):
                     
                     # You can add your custom logic here to respond to the removal of the first reaction
                     print(f"{bot.get_user(user_id)} removed their first reaction from the message!")
+
+
+
+@bot.tree.command(name = "count", description = "pisi uzpisai davai")
+async def count(interaction: discord.Interaction):
+
+    if interaction.channel_id == VOTING_CHANNEL_ID:
+        msgs = []
+        
+        async for msg in interaction.channel.history():
+            if (len(msg.reactions) == 2):
+                msgs.append(msg)
+
+        def sort_by_like(e):
+            return e.reactions[0].count
+
+        def sort_by_skull(e):
+            return e.reactions[1].count
+
+        
+        msgs.sort(reverse=True,key=sort_by_like)
+        for msg in msgs:
+                        
+
+            print(msg.reactions)
+
+        print('\n-------------------------\n')
+
+        msgs.sort(reverse=True,key=sort_by_skull)
+        for msg in msgs:
+            print(msg.reactions)
+
+
+        embed=discord.Embed(title="Sample Embed", description="This is an embed that will show how to build an embed and the different components", color=0xFF5733)
+        await interaction.response.send_message(embed=embed)
+
+        print(msgs[0])
+
+
+
+    else:
+        print("this only works in voting channel!")
+    
 
 bot.run(TOKEN)
