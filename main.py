@@ -18,11 +18,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 TOKEN = os.getenv('TOKEN')
 
+GUILD_ID = 1165580717204439121
+
 SUBMISSIONS_CHANNEL_ID = 1165583893324382218
 VOTING_CHANNEL_ID = 1165583928954978424
 
 SUBMISSIONS_CHANNEL_ID_ISTORIJOS = 1166033643752407111
 VOTING_CHANNEL_ID_ISTORIJOS = 1166033690158182470
+
+GUILD_ID = 1165580717204439121
+
+count_message = False
 
 
 @bot.event
@@ -34,6 +40,10 @@ async def on_ready():
 # fotkes
 @bot.event
 async def on_message(msg):
+
+    global count_message
+    if count_message:
+        count_message = False
 
     if msg.content.startswith('$hello'):
         await msg.channel.send(f'Sw {msg.author} pashol naxui dalbajobe')
@@ -48,11 +58,10 @@ async def on_message(msg):
     voting_channel = bot.get_channel(VOTING_CHANNEL_ID)
     voting_channel_istorijos = bot.get_channel(VOTING_CHANNEL_ID_ISTORIJOS)
     
+    attachment_count = len(msg.attachments)
 
     # fotkes
     if msg.channel.id == SUBMISSIONS_CHANNEL_ID:
-        attachment_count = len(msg.attachments)
-
         # if more than one attachment
         if attachment_count > 1:
             await msg.author.send("Only one attachment is allowed")
@@ -87,6 +96,16 @@ async def on_message(msg):
 
     # istorijos
     if msg.channel.id == SUBMISSIONS_CHANNEL_ID_ISTORIJOS:
+        # if more than one attachment
+        if attachment_count > 0:
+            await msg.author.send("Only plain text stowies allowed")
+            await msg.delete()
+            return
+        elif msg.content.startswith("http"):
+            await msg.author.send("No links alowed")
+            await msg.delete()
+            return
+
         user = msg.author
         embed=discord.Embed(title="Short scawy story",
                                 description=f"Uploaded by: {user.mention}",
@@ -94,7 +113,6 @@ async def on_message(msg):
         embed.add_field(name="Story", value = msg.content, inline=False)
         await voting_channel_istorijos.send(embed = embed)
         await msg.delete()
-
 
 
 
@@ -160,11 +178,15 @@ async def on_raw_reaction_remove(payload):
 
 
 
-@bot.tree.command(name = "count", description = "pisi uzpisai davai")
-async def count(interaction: discord.Interaction):
+@bot.tree.command(name = "count", description = "pisi uzpisai davai ['winners', 'losers']")
+async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
 
-    if interaction.channel_id == VOTING_CHANNEL_ID:
+    if interaction.channel_id in [VOTING_CHANNEL_ID, VOTING_CHANNEL_ID_ISTORIJOS]:
         msgs = []
+
+        if nezinom_kaip_pavadinti not in ["winners", "losers"]:
+            await interaction.response.send_message("Xuj cia pezi")
+            return
         
         async for msg in interaction.channel.history():
             if (len(msg.reactions) == 2):
@@ -175,29 +197,52 @@ async def count(interaction: discord.Interaction):
 
         def sort_by_skull(e):
             return e.reactions[1].count
-
         
-        msgs.sort(reverse=True,key=sort_by_like)
+        index = 0
+        emoji = ''
+        
+        if nezinom_kaip_pavadinti == "winners":
+            msgs.sort(reverse = True, key = sort_by_like)
+            index = 0
+            emoji = '👍'
+        else:
+            msgs.sort(reverse = True, key = sort_by_skull)
+            index = 1
+            emoji = '💀'
+
+            
+
+        winner_list = ''
+        current_winner = 1
         for msg in msgs:
-                        
-            print(msg.reactions)
+            if current_winner > 10:
+                break
 
-        print('\n-------------------------\n')
+            winner_list += f"{current_winner}. https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id}  {msg.reactions[index].count} {emoji}\n"
 
-        msgs.sort(reverse=True,key=sort_by_skull)
-        for msg in msgs:
-            print(msg.reactions)
+            current_winner += 1
 
-
-        embed=discord.Embed(title="Sample Embed", description="This is an embed that will show how to build an embed and the different components", color=0xFF5733)
-        await interaction.response.send_message(embed=embed)
-
-        print(msgs[0])
+        embed=discord.Embed(title = nezinom_kaip_pavadinti.capitalize(),
+                            description = winner_list,
+                            color = 0xFF5733)
 
 
+        global count_message
+        count_message = True
+        # await interaction.response.send_message(embed = embed)
+        await interaction.response.send_message(msgs[0])
+
+
+        #embed=discord.Embed(title="Sample Embed", description="This is an embed that will show how to build an embed and the different components", color=0xFF5733)
+        #embed.add_field(name="Story", value = msg.content, inline=False)
+        # await interaction.response.send_message(embed=embed)
+
+        # print(msgs[0])
+
+        # https://discord.com/channels/guild_id/channel_id/message_id
 
     else:
-        print("this only works in voting channel!")
+        await interaction.response.send_message("this only works in voting channel!")
     
 
 bot.run(TOKEN)
