@@ -21,14 +21,17 @@ TOKEN = os.getenv('TOKEN')
 SUBMISSIONS_CHANNEL_ID = 1165583893324382218
 VOTING_CHANNEL_ID = 1165583928954978424
 
+SUBMISSIONS_CHANNEL_ID_ISTORIJOS = 1166033643752407111
+VOTING_CHANNEL_ID_ISTORIJOS = 1166033690158182470
+
+
 @bot.event
 async def on_ready():
     print(f'We have logged in as {bot.user}')
     await bot.tree.sync()
 
 
-
-
+# fotkes
 @bot.event
 async def on_message(msg):
 
@@ -36,23 +39,27 @@ async def on_message(msg):
         await msg.channel.send(f'Sw {msg.author} pashol naxui dalbajobe')
 
     if msg.author == bot.user:
-        if msg.channel.id == VOTING_CHANNEL_ID:
+        if msg.channel.id == VOTING_CHANNEL_ID or msg.channel.id == VOTING_CHANNEL_ID_ISTORIJOS:
             await msg.add_reaction("👍")
             await msg.add_reaction("💀")
         else:
             return
     
     voting_channel = bot.get_channel(VOTING_CHANNEL_ID)
+    voting_channel_istorijos = bot.get_channel(VOTING_CHANNEL_ID_ISTORIJOS)
+    
 
-    # if message is sent to submissions channel
+    # fotkes
     if msg.channel.id == SUBMISSIONS_CHANNEL_ID:
         attachment_count = len(msg.attachments)
 
+        # if more than one attachment
         if attachment_count > 1:
             await msg.author.send("Only one attachment is allowed")
             await msg.delete()
             return
     
+        # if its not an image
         if attachment_count == 0:
             await msg.author.send("Please send an image. Not a text message!")
             await msg.delete()
@@ -77,6 +84,17 @@ async def on_message(msg):
             await msg.author.send(f"Allowed extensions: {allowed_extensions}\nNote: iphone RAW photos (chujnia) aren't allowed")
         
         await msg.delete()
+
+    # istorijos
+    if msg.channel.id == SUBMISSIONS_CHANNEL_ID_ISTORIJOS:
+        user = msg.author
+        embed=discord.Embed(title="Short scawy story",
+                                description=f"Uploaded by: {user.mention}",
+                                color=0xFF5733)
+        embed.add_field(name="Story", value = msg.content, inline=False)
+        await voting_channel_istorijos.send(embed = embed)
+        await msg.delete()
+
 
 
 
@@ -162,7 +180,6 @@ async def count(interaction: discord.Interaction):
         msgs.sort(reverse=True,key=sort_by_like)
         for msg in msgs:
                         
-
             print(msg.reactions)
 
         print('\n-------------------------\n')
