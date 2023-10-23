@@ -26,10 +26,9 @@ VOTING_CHANNEL_ID = 1165583928954978424
 SUBMISSIONS_CHANNEL_ID_ISTORIJOS = 1166033643752407111
 VOTING_CHANNEL_ID_ISTORIJOS = 1166033690158182470
 
-GUILD_ID = 1165580717204439121
+IT_ROLE_ID = 1166056850899337259
 
-count_message = False
-
+no_reaction = False
 
 @bot.event
 async def on_ready():
@@ -41,9 +40,10 @@ async def on_ready():
 @bot.event
 async def on_message(msg):
 
-    global count_message
-    if count_message:
-        count_message = False
+    global no_reaction
+    if no_reaction:
+        no_reaction = False
+        return
 
     if msg.content.startswith('$hello'):
         await msg.channel.send(f'Sw {msg.author} pashol naxui dalbajobe')
@@ -129,12 +129,12 @@ async def on_raw_reaction_add(payload):
         return
 
 
-    if not (reaction == "👍" or reaction == "💀") and channel_id == VOTING_CHANNEL_ID:
+    if not (reaction == "👍" or reaction == "💀") and (channel_id == VOTING_CHANNEL_ID or channel_id == VOTING_CHANNEL_ID_ISTORIJOS):
         channel = bot.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
         await message.remove_reaction(payload.emoji, discord.Object(user_id))
 
-    if payload.event_type == "REACTION_ADD" and channel_id == VOTING_CHANNEL_ID:
+    if payload.event_type == "REACTION_ADD" and (channel_id == VOTING_CHANNEL_ID or channel_id == VOTING_CHANNEL_ID_ISTORIJOS):
         if user_reactions.get(user_id, None) is None:
             user_reactions[user_id] = {}
 
@@ -158,34 +158,30 @@ async def on_raw_reaction_remove(payload):
     user_id = payload.user_id
     channel_id = payload.channel_id
 
-    if user_id == bot.user.id and channel_id != VOTING_CHANNEL_ID:
+    if user_id == bot.user.id and (channel_id != VOTING_CHANNEL_ID or channel_id != VOTING_CHANNEL_ID_ISTORIJOS):
         return
    
-    if payload.event_type == "REACTION_REMOVE" and channel_id == VOTING_CHANNEL_ID:
+    if payload.event_type == "REACTION_REMOVE" and (channel_id == VOTING_CHANNEL_ID or channel_id == VOTING_CHANNEL_ID_ISTORIJOS):
         if user_reactions.get(user_id, None) is not None:
             user_message_reactions = user_reactions[user_id]
             if user_message_reactions.get(message_id, None) is not None:
                 user_message_reactions[message_id] -= 1
 
-                # Check if the user removed their first reaction
-                if user_message_reactions[message_id] == 0:
-                    channel_id = payload.channel_id
-                    channel = bot.get_channel(channel_id)
-                    message = await channel.fetch_message(message_id)
-                    
-                    # You can add your custom logic here to respond to the removal of the first reaction
-                    print(f"{bot.get_user(user_id)} removed their first reaction from the message!")
-
-
-
 @bot.tree.command(name = "count", description = "pisi uzpisai davai ['winners', 'losers']")
 async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
+
+    global no_reaction
+    if str(IT_ROLE_ID) not in str(interaction.user.roles):
+        no_reaction = True
+        await interaction.response.send_message("You need to the the IT role to be able to use this command", ephemeral = True)
+        return
 
     if interaction.channel_id in [VOTING_CHANNEL_ID, VOTING_CHANNEL_ID_ISTORIJOS]:
         msgs = []
 
         if nezinom_kaip_pavadinti not in ["winners", "losers"]:
-            await interaction.response.send_message("Xuj cia pezi")
+            no_reaction = True
+            await interaction.response.send_message("Xuj cia pezi", ephemeral = True)
             return
         
         async for msg in interaction.channel.history():
@@ -227,22 +223,13 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
                             color = 0xFF5733)
 
 
-        global count_message
-        count_message = True
-        # await interaction.response.send_message(embed = embed)
-        await interaction.response.send_message(msgs[0])
-
-
-        #embed=discord.Embed(title="Sample Embed", description="This is an embed that will show how to build an embed and the different components", color=0xFF5733)
-        #embed.add_field(name="Story", value = msg.content, inline=False)
-        # await interaction.response.send_message(embed=embed)
-
-        # print(msgs[0])
-
-        # https://discord.com/channels/guild_id/channel_id/message_id
+        
+        no_reaction = True
+        await interaction.response.send_message(embed = embed)
+        # await interaction.response.send_message("@Dax0s")
 
     else:
-        await interaction.response.send_message("this only works in voting channel!")
+        await interaction.response.send_message("this only works in voting channels!")
     
 
 bot.run(TOKEN)
