@@ -36,6 +36,9 @@ async def on_ready():
     await bot.tree.sync()
 
 
+user_submissions_costume = {}
+user_submissions_story = {}
+
 # fotkes
 @bot.event
 async def on_message(msg):
@@ -59,7 +62,7 @@ async def on_message(msg):
     voting_channel_istorijos = bot.get_channel(VOTING_CHANNEL_ID_ISTORIJOS)
     
     attachment_count = len(msg.attachments)
-
+    
     # fotkes
     if msg.channel.id == SUBMISSIONS_CHANNEL_ID:
         # if more than one attachment
@@ -88,9 +91,11 @@ async def on_message(msg):
                                 color=0xFF5733)
             embed.set_image(url=msg.attachments[0])
             await voting_channel.send(embed = embed)
+            user_submissions_costume[user.id]=user
+            print(user_submissions_costume[user.id]) 
             await msg.author.send("Photo uploaded successfully")
         else:
-            await msg.author.send(f"Allowed extensions: {allowed_extensions}\nNote: iphone RAW photos (chujnia) aren't allowed")
+            await msg.author.send(f"Allowed extensions: {allowed_extensions}\nNote: iphone RAW (ProRes) photos (chujnia) aren't allowed")
         
         await msg.delete()
 
@@ -112,6 +117,8 @@ async def on_message(msg):
                                 color=0xFF5733)
         embed.add_field(name="Story", value = msg.content, inline=False)
         await voting_channel_istorijos.send(embed = embed)
+        user_submissions_story[user.id]=user
+        print(user_submissions_story[user.id])
         await msg.delete()
 
 
@@ -137,6 +144,7 @@ async def on_raw_reaction_add(payload):
     if payload.event_type == "REACTION_ADD" and (channel_id == VOTING_CHANNEL_ID or channel_id == VOTING_CHANNEL_ID_ISTORIJOS):
         if user_reactions.get(user_id, None) is None:
             user_reactions[user_id] = {}
+            print("User added a reaction")
 
         user_message_reactions = user_reactions[user_id]
         if user_message_reactions.get(message_id, None) is None:
@@ -160,12 +168,14 @@ async def on_raw_reaction_remove(payload):
 
     if user_id == bot.user.id and (channel_id != VOTING_CHANNEL_ID or channel_id != VOTING_CHANNEL_ID_ISTORIJOS):
         return
-   
+
     if payload.event_type == "REACTION_REMOVE" and (channel_id == VOTING_CHANNEL_ID or channel_id == VOTING_CHANNEL_ID_ISTORIJOS):
         if user_reactions.get(user_id, None) is not None:
             user_message_reactions = user_reactions[user_id]
+            
             if user_message_reactions.get(message_id, None) is not None:
                 user_message_reactions[message_id] -= 1
+                print(f"User removed their first reaction {user_message_reactions[message_id]}")
 
 @bot.tree.command(name = "count", description = "pisi uzpisai davai ['winners', 'losers']")
 async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
@@ -194,6 +204,13 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
         def sort_by_skull(e):
             return e.reactions[1].count
         
+        # i=0
+        # embeds = msg.embeds
+        # for embed in embeds:
+        #     print(f"{msg.embeds[i].to_dict()}")
+        #     i=i+1
+        
+
         index = 0
         emoji = ''
         
@@ -211,17 +228,19 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
         winner_list = ''
         current_winner = 1
         for msg in msgs:
+            embeds=msg.embeds
             if current_winner > 10:
                 break
-
-            winner_list += f"{current_winner}. https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id}  {msg.reactions[index].count} {emoji}\n"
-
+            if msg.channel.id == VOTING_CHANNEL_ID_ISTORIJOS:
+                winner_list += f"{current_winner}. {embeds[0].description} [Scawy story](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
+            if msg.channel.id == VOTING_CHANNEL_ID:
+                winner_list += f"{current_winner}. {embeds[0].description} [Costume](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
             current_winner += 1
+
 
         embed=discord.Embed(title = nezinom_kaip_pavadinti.capitalize(),
                             description = winner_list,
                             color = 0xFF5733)
-
 
         
         no_reaction = True
