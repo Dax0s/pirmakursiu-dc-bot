@@ -228,13 +228,13 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
         winner_list = ''
         current_winner = 1
         for msg in msgs:
-            embeds=msg.embeds
+            msg_embeds=msg.embeds
             if current_winner > 10:
                 break
             if msg.channel.id == VOTING_CHANNEL_ID_ISTORIJOS:
-                winner_list += f"{current_winner}. {embeds[0].description} [Scawy story](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
+                winner_list += f"{current_winner}. {msg_embeds[0].description} [Scawy story](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
             if msg.channel.id == VOTING_CHANNEL_ID:
-                winner_list += f"{current_winner}. {embeds[0].description} [Costume](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
+                winner_list += f"{current_winner}. {msg_embeds[0].description} [Costume](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
             current_winner += 1
 
 
