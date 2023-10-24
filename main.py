@@ -18,17 +18,17 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 TOKEN = os.getenv('TOKEN')
 
 ### IDs
-GUILD_ID = 1165580717204439121
+GUILD_ID = 1166408845342552115
 
-SUBMISSIONS_CHANNEL_ID = 1165583893324382218
-VOTING_CHANNEL_ID_PHOTOS = 1165583928954978424
+SUBMISSIONS_CHANNEL_ID_OUTFITS = 1166409538824581120
+VOTING_CHANNEL_ID_OUTFITS = 1166409591379202159
 
-SUBMISSIONS_CHANNEL_ID_ISTORIJOS = 1166033643752407111
-VOTING_CHANNEL_ID_STORIES = 1166033690158182470
+SUBMISSIONS_CHANNEL_ID_STORIES = 1166409184762409032
+VOTING_CHANNEL_ID_STORIES = 1166409434621300776
 
-IT_ROLE_ID = 1166056850899337259
+IT_ROLE_ID = 1166408994710097950
 
-EVERYONE_ROLE_ID = 1165580717204439121
+EVERYONE_ROLE_ID = 1166408845342552115
 ###
 
 no_reaction = False
@@ -50,11 +50,11 @@ async def on_ready():
     print(f'We have logged in as {bot.user}')
     await bot.tree.sync()
 
-    voting_channel_photos = bot.get_channel(VOTING_CHANNEL_ID_PHOTOS)
+    voting_channel_photos = bot.get_channel(VOTING_CHANNEL_ID_OUTFITS)
     voting_channel_stories = bot.get_channel(VOTING_CHANNEL_ID_STORIES)
 
-    submission_channel_photos = bot.get_channel(SUBMISSIONS_CHANNEL_ID)
-    submission_channel_stories = bot.get_channel(SUBMISSIONS_CHANNEL_ID_ISTORIJOS)
+    submission_channel_photos = bot.get_channel(SUBMISSIONS_CHANNEL_ID_OUTFITS)
+    submission_channel_stories = bot.get_channel(SUBMISSIONS_CHANNEL_ID_STORIES)
     everyone_role = bot.get_guild(GUILD_ID).get_role(EVERYONE_ROLE_ID)
 
     await submission_channel_photos.set_permissions(everyone_role, send_messages=False)
@@ -81,7 +81,7 @@ async def on_ready():
             for user in users:
                 all_photos_messages[msg.id]['bad_reactions'].append(user.id)
 
-    msgs = [msg async for msg in voting_channel_photos.history(limit=1000)]
+    msgs = [msg async for msg in voting_channel_stories.history(limit=1000)]
     logging.info("Messages in stories fetched")
     for msg in msgs:
         if len(msg.reactions) == 2:
@@ -98,8 +98,8 @@ async def on_ready():
                 all_stories_messages[msg.id]['bad_reactions'].append(user.id)
 
     logging.info("Reactions fetched")
-    await submission_channel_photos.purge()
-    await submission_channel_stories.purge()
+    # await submission_channel_photos.purge()
+    # await submission_channel_stories.purge()
 
     await submission_channel_photos.set_permissions(everyone_role, send_messages=True)
     await submission_channel_stories.set_permissions(everyone_role, send_messages=True)
@@ -121,29 +121,29 @@ async def on_message(msg):
         return
 
     if msg.content.startswith('$hello'):
-        await msg.channel.send(f'Sw {msg.author} pashol naxui dalbajobe')
+        await msg.author.send(f'Sw {msg.author} pashol naxui dalbajobe')
 
     if msg.author == bot.user:
-        if msg.channel.id == VOTING_CHANNEL_ID_PHOTOS or msg.channel.id == VOTING_CHANNEL_ID_STORIES:
+        if msg.channel.id == VOTING_CHANNEL_ID_OUTFITS or msg.channel.id == VOTING_CHANNEL_ID_STORIES:
             await msg.add_reaction("👍")
             await msg.add_reaction("💀")
             logging.info(f"2req. Reactions to message added. Message: {msg.content}")
         else:
             return
 
-    if msg.channel.id == VOTING_CHANNEL_ID_PHOTOS:
+    if msg.channel.id == VOTING_CHANNEL_ID_OUTFITS:
         all_photos_messages[msg.id] = {"good_reactions": [], "bad_reactions": []}
 
     if msg.channel.id == VOTING_CHANNEL_ID_STORIES:
         all_stories_messages[msg.id] = {"good_reactions": [], "bad_reactions": []}
 
-    voting_channel = bot.get_channel(VOTING_CHANNEL_ID_PHOTOS)
+    voting_channel = bot.get_channel(VOTING_CHANNEL_ID_OUTFITS)
     voting_channel_istorijos = bot.get_channel(VOTING_CHANNEL_ID_STORIES)
 
     attachment_count = len(msg.attachments)
 
     # fotkes
-    if msg.channel.id == SUBMISSIONS_CHANNEL_ID:
+    if msg.channel.id == SUBMISSIONS_CHANNEL_ID_OUTFITS:
         # if more than one attachment
         if attachment_count > 1:
             await msg.author.send("Only one attachment is allowed")
@@ -158,8 +158,6 @@ async def on_message(msg):
             logging.warning(f"2req. No attachments added to photo contest. User: {msg.author}")
             return
 
-        print(msg.attachments)
-
         full_filename = msg.attachments[0].filename
         file_extension = full_filename.split('.')[1]
 
@@ -173,8 +171,6 @@ async def on_message(msg):
             embed.set_image(url=msg.attachments[0])
             await voting_channel.send(embed=embed)
             logging.info(f"1req. Photo submission uploaded. User: {msg.author}")
-            user_submissions_costume[user.id] = user
-            print(user_submissions_costume[user.id])
             await msg.author.send("Photo uploaded successfully")
             logging.info(f"1req. Successful photo upload DM sent. User: {msg.author}")
         else:
@@ -186,7 +182,7 @@ async def on_message(msg):
         logging.info("1req. Message deleted")
 
     # istorijos
-    if msg.channel.id == SUBMISSIONS_CHANNEL_ID_ISTORIJOS:
+    if msg.channel.id == SUBMISSIONS_CHANNEL_ID_STORIES:
         # if more than one attachment
         if attachment_count > 0:
             await msg.author.send("Only plain text stowies allowed")
@@ -205,10 +201,9 @@ async def on_message(msg):
                               color=0xFF5733)
         embed.add_field(name="Story", value=msg.content, inline=False)
         await voting_channel_istorijos.send(embed=embed)
-        user_submissions_story[user.id] = user
-        print(user_submissions_story[user.id])
+        await msg.author.send("Story uploaded!")
         await msg.delete()
-        logging.info(f"2req. Story uploaded. User: {msg.author}")
+        logging.info(f"3req. Story uploaded. User: {msg.author}")
 
 
 user_reactions = {}
@@ -225,20 +220,20 @@ async def on_raw_reaction_add(payload):
         return
 
     if not (reaction == "👍" or reaction == "💀") and (
-            channel_id == VOTING_CHANNEL_ID_PHOTOS or channel_id == VOTING_CHANNEL_ID_STORIES):
+            channel_id == VOTING_CHANNEL_ID_OUTFITS or channel_id == VOTING_CHANNEL_ID_STORIES):
         channel = bot.get_channel(channel_id)
         message = await channel.fetch_message(message_id)
         await message.remove_reaction(payload.emoji, discord.Object(user_id))
-        logging.warning(f"2req. Incorrect reaction added. User: {payload.user_id}")
+        logging.warning(f"2req. Incorrect reaction added. User: {user_id}")
         return
 
-    if channel_id == VOTING_CHANNEL_ID_PHOTOS:
+    if channel_id == VOTING_CHANNEL_ID_OUTFITS:
         if reaction == BAD_REACTION:
             if user_id in all_photos_messages[message_id]['good_reactions']:
                 channel = bot.get_channel(channel_id)
                 message = await channel.fetch_message(message_id)
                 await message.remove_reaction(payload.emoji, discord.Object(user_id))
-                logging.warning(f"2req. Incorrect reaction added. User: {payload.user_id}")
+                logging.warning(f"2req. Incorrect reaction added. User: {user_id}")
                 return
             else:
                 all_photos_messages[message_id]['bad_reactions'].append(user_id)
@@ -247,7 +242,7 @@ async def on_raw_reaction_add(payload):
                 channel = bot.get_channel(channel_id)
                 message = await channel.fetch_message(message_id)
                 await message.remove_reaction(payload.emoji, discord.Object(user_id))
-                logging.warning(f"2req. Incorrect reaction added. User: {payload.user_id}")
+                logging.warning(f"2req. Incorrect reaction added. User: {user_id}")
                 return
             else:
                 all_photos_messages[message_id]['good_reactions'].append(user_id)
@@ -257,7 +252,7 @@ async def on_raw_reaction_add(payload):
                 channel = bot.get_channel(channel_id)
                 message = await channel.fetch_message(message_id)
                 await message.remove_reaction(payload.emoji, discord.Object(user_id))
-                logging.warning(f"2req. Incorrect reaction added. User: {payload.user_id}")
+                logging.warning(f"2req. Incorrect reaction added. User: {user_id}")
                 return
             else:
                 all_stories_messages[message_id]['bad_reactions'].append(user_id)
@@ -266,7 +261,7 @@ async def on_raw_reaction_add(payload):
                 channel = bot.get_channel(channel_id)
                 message = await channel.fetch_message(message_id)
                 await message.remove_reaction(payload.emoji, discord.Object(user_id))
-                logging.warning(f"2req. Incorrect reaction added. User: {payload.user_id}")
+                logging.warning(f"2req. Incorrect reaction added. User: {user_id}")
                 return
             else:
                 all_stories_messages[message_id]['good_reactions'].append(user_id)
@@ -283,7 +278,7 @@ async def on_raw_reaction_remove(payload):
         return
 
     try:
-        if channel_id == VOTING_CHANNEL_ID_PHOTOS:
+        if channel_id == VOTING_CHANNEL_ID_OUTFITS:
             if reaction == BAD_REACTION:
                 all_photos_messages[message_id]['bad_reactions'].remove(user_id)
             else:
@@ -306,18 +301,18 @@ async def purgis(interaction: discord.Interaction):
                                                 ephemeral=True)
         return
 
-    submission_channel_photos = bot.get_channel(SUBMISSIONS_CHANNEL_ID)
-    submission_channel_stories = bot.get_channel(SUBMISSIONS_CHANNEL_ID_ISTORIJOS)
-    voting_channel_photos = bot.get_channel(VOTING_CHANNEL_ID_PHOTOS)
+    submission_channel_photos = bot.get_channel(SUBMISSIONS_CHANNEL_ID_OUTFITS)
+    submission_channel_stories = bot.get_channel(SUBMISSIONS_CHANNEL_ID_STORIES)
+    voting_channel_photos = bot.get_channel(VOTING_CHANNEL_ID_OUTFITS)
     voting_channel_stories = bot.get_channel(VOTING_CHANNEL_ID_STORIES)
 
+    no_reaction = True
+    await interaction.response.send_message("Purginu krc")
+
     await submission_channel_photos.purge()
-    await submission_channel_photos.purge()
+    await submission_channel_stories.purge()
     await voting_channel_photos.purge()
     await voting_channel_stories.purge()
-
-    no_reaction = True
-    await interaction.response.send_message("Prapurginau")
 
 
 @bot.tree.command(name="count", description="pisi uzpisai davai ['winners', 'losers']")
@@ -329,7 +324,7 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
                                                 ephemeral=True)
         return
 
-    if interaction.channel_id in [VOTING_CHANNEL_ID_PHOTOS, VOTING_CHANNEL_ID_STORIES]:
+    if interaction.channel_id in [VOTING_CHANNEL_ID_OUTFITS, VOTING_CHANNEL_ID_STORIES]:
         msgs = []
 
         if nezinom_kaip_pavadinti not in ["winners", "losers"]:
@@ -367,7 +362,7 @@ async def count(interaction: discord.Interaction, nezinom_kaip_pavadinti: str):
                 break
             if msg.channel.id == VOTING_CHANNEL_ID_STORIES:
                 winner_list += f"{current_winner}. {msg_embeds[0].description} [Scawy story](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
-            if msg.channel.id == VOTING_CHANNEL_ID_PHOTOS:
+            if msg.channel.id == VOTING_CHANNEL_ID_OUTFITS:
                 winner_list += f"{current_winner}. {msg_embeds[0].description} [Costume](https://discord.com/channels/{GUILD_ID}/{interaction.channel_id}/{msg.id})  Votes received: {msg.reactions[index].count} {emoji}\n"
             current_winner += 1
 
